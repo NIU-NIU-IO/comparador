@@ -227,6 +227,7 @@ table.rep{min-width:0}
         </div>
         <div class="row-btns noprint">
           <button class="btn ghost sm" id="m-add" type="button">+ Material</button>
+          <button class="btn danger sm" id="m-clear" type="button">Borrar información</button>
         </div>
       </div>
       <div class="scroll" id="m-wrap"></div>
@@ -236,10 +237,10 @@ table.rep{min-width:0}
       <div class="toolbar">
         <div>
           <h2>Costos, venta y ganancia por caso</h2>
-          <p class="muted" style="margin:0">Cobro Redwood: captura el valor en una moneda y se convierte con el tipo de cambio.</p>
+          <p class="muted" style="margin:0">Cobro Refinería: captura la tarifa por kg en una moneda y se convierte con el tipo de cambio.</p>
         </div>
         <div class="fx-inline">
-          <label class="f">Cobro Redwood por kg
+          <label class="f">Cobro Refinería por kg
             <input id="cobro-val" type="number" step="any" inputmode="decimal">
           </label>
           <label class="f">Moneda
@@ -253,6 +254,7 @@ table.rep{min-width:0}
         </div>
       </div>
       <div class="scroll" id="g-wrap"></div>
+      <p class="status err" id="g-warn" role="status"></p>
       <div class="leyenda">
         <span><b class="gasto">Rojo</b> = gasto</span>
         <span><b class="venta">Negro</b> = venta</span>
@@ -345,7 +347,7 @@ table.rep{min-width:0}
 (function(){
 "use strict";
 
-const STORE = "niu-cotizador-v2";
+const STORE = "niu-cotizador-v3";
 const TOKEN_KEY = "niu-banxico-token";
 const THEME_KEY = "niu-cotizador-theme";
 const BANXICO_URL = "https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43718/datos/oportuno";
@@ -353,6 +355,9 @@ const PCTS = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50];
 const MAT_LIST = ["LCO","LMO","LTO","NCA Celda","NCA Modulo","NCA Pack","NMC EVs Celda","NMC EVs Modulo","NMC EVs Pack","NMC Mix","ESS Packs","LFO"];
 const SIG_ROLES = ["Elaboró","Revisó","Autorizó"];
 const C_RED = ["#C62828","#EF5350","#8B2020","#FF9E9E"];
+function blankMaterials() {
+  return Array.from({ length: 10 }, () => ({ name: "", compra: 0, venta: 0, peso: 0 }));
+}
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -374,15 +379,10 @@ function defaults() {
     rateDate: "",
     rep: { cliente: "", folio: "", fecha: new Date().toISOString().slice(0, 10), ref: "" },
     tolling: [0,1,2,3,4].map(() => ({ kg: 20000, transporte: 70000, packing: 4000, rp: 60000, maniobras: 22000, agentes: 21000, gastos: 12000, pct: null, coordManual: null })),
-    materials: MAT_LIST.slice(0, 10).map(name => ({ name, compra: 0, venta: 0, peso: 0 })),
+    materials: blankMaterials(),
+    extras: [],
     cobro: { cur: "USD", val: 0.56 },
-    cases: [
-      { ventaKg: 35,   cobroMode: "kg",   cobroFijo: 0 },
-      { ventaKg: 40,   cobroMode: "kg",   cobroFijo: 0 },
-      { ventaKg: 45,   cobroMode: "kg",   cobroFijo: 0 },
-      { ventaKg: 26.5, cobroMode: "fijo", cobroFijo: 100000 },
-      { ventaKg: 18,   cobroMode: "fijo", cobroFijo: 0 }
-    ].map(c => ({ ...c, transporte: 70000, packing: 4000, rp: 60000, maniobras: 22000, agentes: 21000, gastos: 12000 }))
+    cases: [0,1,2,3,4].map(() => ({ transporte: 70000, packing: 4000, rp: 60000, maniobras: 22000, agentes: 21000, gastos: 12000 }))
   };
 }
 let S = defaults();
@@ -395,9 +395,10 @@ function blankTolling() {
   S.tolling = [0,1,2,3,4].map(() => ({ kg: 0, transporte: 0, packing: 0, rp: 0, maniobras: 0, agentes: 0, gastos: 0, pct: null, coordManual: null }));
 }
 function blankGeneral() {
-  S.materials = S.materials.map(m => ({ ...m, compra: 0, venta: 0, peso: 0 }));
-  S.cases = S.cases.map(() => ({ ventaKg: 0, cobroMode: "kg", cobroFijo: 0, transporte: 0, packing: 0, rp: 0, maniobras: 0, agentes: 0, gastos: 0 }));
+  S.materials = blankMaterials();
+  S.cases = S.cases.map(() => ({ transporte: 0, packing: 0, rp: 0, maniobras: 0, agentes: 0, gastos: 0 }));
   S.cobro = { cur: "USD", val: 0 };
+  S.extras = [];
 }
 
 /* ---------- cálculos ---------- */
@@ -414,17 +415,27 @@ function calcT(t) {
   return { acopio, sub, coord, total, totalUSD: toUSD(total), pct: total ? coord / total : NaN };
 }
 
-function calcC(c, kg) {
+function calcC(c, kg, i) {
   const acopio = 1.2 * kg;
-  const cobro = c.cobroMode === "fijo" ? c.cobroFijo : cobroKgMXN() * kg;
-  const costos = c.transporte + acopio + c.packing + c.rp + c.maniobras + c.agentes + c.gastos + cobro;
+  const extras = S.extras.reduce((a, x) => a + (x.vals[i] || 0), 0);
+  // Refinería: si hay monto manual se usa; si no, tarifa global × kg
+  const cobro = c.cobroManual != null ? c.cobroManual : cobroKgMXN() * kg;
+  const costos = c.transporte + acopio + c.packing + c.rp + c.maniobras + c.agentes + c.gastos + extras + cobro;
   const compraKg = kg ? costos / kg : NaN;
-  const venta = kg * c.ventaKg;
-  const ganancia = venta - costos;
+  // Promedio ponderado del listado: suma de (venta por kg × peso) ÷ kg
+  const ventaTot = S.materials.reduce((a, m) => a + m.venta * m.peso, 0);
+  const ventaProm = kg ? ventaTot / kg : NaN;
+  // Si el $/kg manual es distinto de cero se usa; si no, el promedio. Al menos uno debe tener valor.
+  let usado = NaN;
+  if (c.ventaKgManual) usado = c.ventaKgManual;
+  else if (Number.isFinite(ventaProm) && ventaProm !== 0) usado = ventaProm;
+  const venta = Number.isFinite(usado) ? usado * kg : NaN;
+  const ganancia = Number.isFinite(venta) ? venta - costos : NaN;
   return {
-    acopio, cobro, costos, costosUSD: toUSD(costos), compraKg, compraKgUSD: toUSD(compraKg),
-    ventaKgUSD: toUSD(c.ventaKg), venta, ventaUSD: toUSD(venta), ganancia, gananciaUSD: toUSD(ganancia),
-    pct: venta ? ganancia / venta : NaN
+    acopio, extras, cobro, costos, costosUSD: toUSD(costos), compraKg, compraKgUSD: toUSD(compraKg),
+    ventaProm, ventaKg: usado, ventaKgUSD: toUSD(usado), venta, ventaUSD: toUSD(venta),
+    ganancia, gananciaUSD: toUSD(ganancia), pct: venta ? ganancia / venta : NaN,
+    sinPrecio: !Number.isFinite(usado)
   };
 }
 
@@ -486,11 +497,11 @@ function refreshTolling() {
 function renderMaterials() {
   const rows = S.materials.map((m, i) => `<tr>
       <td><input type="text" class="name" list="mat-list" data-m="name" data-i="${i}" value="${esc(m.name)}" placeholder="Escribe o elige" aria-label="Nombre del material ${i + 1}"></td>
-      <td><input class="gasto" type="number" step="any" inputmode="decimal" data-m="compra" data-i="${i}" value="${m.compra}" aria-label="Compra MXN/kg fila ${i + 1}"></td>
+      <td><input class="gasto" type="number" step="any" inputmode="decimal" data-m="compra" data-i="${i}" value="${m.compra || ""}" placeholder="0" aria-label="Compra MXN/kg fila ${i + 1}"></td>
       <td class="gasto" data-mc="compraUSD" data-i="${i}"></td>
-      <td><input class="venta" type="number" step="any" inputmode="decimal" data-m="venta" data-i="${i}" value="${m.venta}" aria-label="Venta MXN/kg fila ${i + 1}"></td>
+      <td><input class="venta" type="number" step="any" inputmode="decimal" data-m="venta" data-i="${i}" value="${m.venta || ""}" placeholder="0" aria-label="Venta MXN/kg fila ${i + 1}"></td>
       <td class="venta" data-mc="ventaUSD" data-i="${i}"></td>
-      <td><input type="number" step="any" inputmode="decimal" data-m="peso" data-i="${i}" value="${m.peso}" aria-label="Peso kg fila ${i + 1}"></td>
+      <td><input type="number" step="any" inputmode="decimal" data-m="peso" data-i="${i}" value="${m.peso || ""}" placeholder="0" aria-label="Peso kg fila ${i + 1}"></td>
       <td class="noprint"><button class="btn ghost sm" type="button" data-mrm="${i}" aria-label="Quitar fila ${i + 1}">×</button></td>
     </tr>`).join("");
   $("#m-wrap").innerHTML = `<datalist id="mat-list">${MAT_LIST.map(x => `<option value="${esc(x)}">`).join("")}</datalist>
@@ -510,8 +521,8 @@ function refreshMaterials() {
   const wc = kg ? S.materials.reduce((a, m) => a + m.compra * m.peso, 0) / kg : NaN;
   const wv = kg ? S.materials.reduce((a, m) => a + m.venta * m.peso, 0) / kg : NaN;
   S.materials.forEach((m, i) => {
-    setTxt(`[data-mc="compraUSD"][data-i="${i}"]`, money(toUSD(m.compra), "USD"));
-    setTxt(`[data-mc="ventaUSD"][data-i="${i}"]`, money(toUSD(m.venta), "USD"));
+    setTxt(`[data-mc="compraUSD"][data-i="${i}"]`, m.compra ? money(toUSD(m.compra), "USD") : "");
+    setTxt(`[data-mc="ventaUSD"][data-i="${i}"]`, m.venta ? money(toUSD(m.venta), "USD") : "");
   });
   setTxt('[data-mt="compra"]', money(wc, "MXN"));
   setTxt('[data-mt="compraUSD"]', money(toUSD(wc), "USD"));
@@ -529,50 +540,71 @@ const G_ROWS = [
   ["maniobras", "Maniobras en Frontera", "in", "gasto"],
   ["agentes", "Agentes Aduanales", "in", "gasto"],
   ["gastos", "Gastos operativos", "in", "gasto"],
-  ["cobro", "Cobro Redwood por procesamiento", "cobro", "gasto"],
-  ["costos", "Total costos (MXN)", "calc", "final"],
-  ["costosUSD", "Total costos (USD)", "calc", "final"],
+  ["_extras", "Gastos adicionales", "extras", "gasto"],
+  ["cobro", "Cobro Refinería (tarifa × kg, o manual)", "cobro", "gasto"],
+  ["_secVta", "Precio de venta", "sec", ""],
+  ["ventaProm", "$/kg venta promedio del listado (MXN)", "calc", "venta"],
+  ["ventaKgManual", "$/kg venta manual (MXN)", "in", "venta"],
+  ["_secMXN", "Resultados en MXN", "sec", ""],
+  ["costos", "Total costos (MXN)", "calc", "gasto"],
   ["compraKg", "$/kg compra (MXN)", "calc", "gasto"],
-  ["compraKgUSD", "$/kg compra (USD)", "calc", "gasto"],
-  ["ventaKg", "$/kg venta (MXN)", "in", "venta"],
-  ["ventaKgUSD", "$/kg venta (USD)", "calc", "venta"],
+  ["ventaKg", "$/kg venta usado (MXN)", "calc", "venta"],
   ["venta", "Venta total (MXN)", "calc", "venta"],
-  ["ventaUSD", "Venta total (USD)", "calc", "venta"],
   ["ganancia", "Ganancia (MXN)", "calc", "final"],
+  ["pct", "% ganancia", "calc", "pctc"],
+  ["_secUSD", "Resultados en USD", "sec", ""],
+  ["costosUSD", "Total costos (USD)", "calc", "gasto"],
+  ["compraKgUSD", "$/kg compra (USD)", "calc", "gasto"],
+  ["ventaKgUSD", "$/kg venta usado (USD)", "calc", "venta"],
+  ["ventaUSD", "Venta total (USD)", "calc", "venta"],
   ["gananciaUSD", "Ganancia (USD)", "calc", "final"],
-  ["pct", "% ganancia", "calc", "pctc"]
+  ["pct2", "% ganancia", "calc", "pctc"]
 ];
+
+function buildExtras() {
+  const rows = S.extras.map((x, k) => `<tr><th><div class="copy"><input type="text" class="name" data-xn="${k}" value="${esc(x.name)}" placeholder="Concepto" aria-label="Nombre del gasto adicional ${k + 1}"><button class="btn ghost sm" type="button" data-xdel="${k}" aria-label="Quitar gasto adicional ${k + 1}">×</button></div></th>${S.cases.map((c, i) => `<td><input class="gasto" type="number" step="any" inputmode="decimal" data-x="${k}" data-i="${i}" value="${x.vals[i] || ""}" placeholder="0" aria-label="${esc(x.name) || "Gasto adicional"} caso ${i + 1}"></td>`).join("")}</tr>`).join("");
+  return rows + `<tr class="noprint"><th><button class="btn ghost sm" type="button" data-xadd="1">+ Gasto adicional</button></th>${S.cases.map(() => "<td></td>").join("")}</tr>`;
+}
 
 function renderCases() {
   const head = `<tr><th>Concepto</th>${S.cases.map((_, i) => `<th>Caso ${i + 1}</th>`).join("")}</tr>`;
-  const body = G_ROWS.map(([k, label, type, cls]) => `<tr><th>${label}</th>${S.cases.map((c, i) => {
-    if (type === "in") return `<td><input class="${cls}" type="number" step="any" inputmode="decimal" data-g="${k}" data-i="${i}" value="${c[k]}" aria-label="${esc(label)} caso ${i + 1}"></td>`;
-    if (type === "cobro") return `<td class="gasto"><div class="coord-cell">
-        <select data-g="cobroMode" data-i="${i}" aria-label="Modo de cobro caso ${i + 1}">
-          <option value="kg"${c.cobroMode === "kg" ? " selected" : ""}>Por kg</option>
-          <option value="fijo"${c.cobroMode === "fijo" ? " selected" : ""}>Monto fijo</option>
-        </select>
-        <input class="gasto" type="number" step="any" inputmode="decimal" data-g="cobroFijo" data-i="${i}" value="${c.cobroFijo}" placeholder="monto MXN" aria-label="Monto fijo de cobro caso ${i + 1}">
-        <span data-gc="cobro" data-i="${i}"></span></div></td>`;
-    return `<td class="${cls}" data-gc="${k}" data-i="${i}"></td>`;
-  }).join("")}</tr>`).join("");
-  $("#g-wrap").innerHTML = `<table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  const body = G_ROWS.map(([k, label, type, cls]) => {
+    if (type === "sec") return `<tr class="grp"><th colspan="${S.cases.length + 1}">${label}</th></tr>`;
+    if (type === "extras") return buildExtras();
+    return `<tr><th>${label}</th>${S.cases.map((c, i) => {
+      if (type === "in") return `<td><input class="${cls}" type="number" step="any" inputmode="decimal" data-g="${k}" data-i="${i}" value="${c[k] ?? ""}" placeholder="0" aria-label="${esc(label)} caso ${i + 1}"></td>`;
+      if (type === "cobro") return `<td class="gasto"><div class="coord-cell"><input class="gasto" type="number" step="any" inputmode="decimal" data-g="cobroManual" data-i="${i}" placeholder="tarifa × kg" aria-label="Cobro Refinería caso ${i + 1}"><span class="mode" data-gc="cobroMode" data-i="${i}"></span></div></td>`;
+      return `<td class="${cls}" data-gc="${k}" data-i="${i}"></td>`;
+    }).join("")}</tr>`;
+  }).join("");
+  const copyRow = `<tr class="copy-row noprint"><th>Copiar datos de otro caso</th>${S.cases.map((_, i) =>
+    `<td><div class="copy"><select aria-label="Caso origen para el ${i + 1}">${S.cases.map((__, j) => j === i ? "" : `<option value="${j}">Caso ${j + 1}</option>`).join("")}</select><button class="btn sm ghost" type="button" data-gcopy-to="${i}">Copiar</button></div></td>`).join("")}</tr>`;
+  $("#g-wrap").innerHTML = `<table class="grid"><thead>${head}</thead><tbody>${copyRow}${body}</tbody></table>`;
   refreshCases();
 }
 
 function refreshCases() {
   const kg = kgTotal();
+  let falta = false;
   S.cases.forEach((c, i) => {
-    const r = calcC(c, kg);
+    const r = calcC(c, kg, i);
+    if (r.sinPrecio) falta = true;
     const put = {
-      kg: num(kg), acopio: num(1.2 * kg), cobro: money(r.cobro, "MXN"),
+      kg: num(kg), acopio: num(1.2 * kg),
+      cobroMode: c.cobroManual != null ? "Manual" : "Tarifa × kg",
+      ventaProm: money(r.ventaProm, "MXN"),
       costos: money(r.costos, "MXN"), costosUSD: money(r.costosUSD, "USD"),
       compraKg: money(r.compraKg, "MXN"), compraKgUSD: money(r.compraKgUSD, "USD"),
-      ventaKgUSD: money(r.ventaKgUSD, "USD"), venta: money(r.venta, "MXN"), ventaUSD: money(r.ventaUSD, "USD"),
-      ganancia: money(r.ganancia, "MXN"), gananciaUSD: money(r.gananciaUSD, "USD"), pct: pctTxt(r.pct)
+      ventaKg: money(r.ventaKg, "MXN"), ventaKgUSD: money(r.ventaKgUSD, "USD"),
+      venta: money(r.venta, "MXN"), ventaUSD: money(r.ventaUSD, "USD"),
+      ganancia: money(r.ganancia, "MXN"), gananciaUSD: money(r.gananciaUSD, "USD"),
+      pct: pctTxt(r.pct), pct2: pctTxt(r.pct)
     };
     for (const k in put) setTxt(`[data-gc="${k}"][data-i="${i}"]`, put[k]);
+    const ci = document.querySelector(`input[data-g="cobroManual"][data-i="${i}"]`);
+    if (ci && document.activeElement !== ci) ci.value = c.cobroManual != null ? c.cobroManual : round2(r.cobro);
   });
+  setTxt("#g-warn", falta ? "Falta precio de venta: captura un $/kg manual en algún caso o agrega precios de venta en el listado." : "");
 }
 
 function refreshCobro() {
@@ -586,7 +618,7 @@ function refreshCobro() {
 function modelData() {
   const kg = kgTotal();
   const T = S.tolling.map(calcT);
-  const C = S.cases.map(c => calcC(c, kg));
+  const C = S.cases.map((c, i) => calcC(c, kg, i));
   return { kg, T, C };
 }
 
@@ -609,7 +641,7 @@ function genSeries(C) {
     { name: "Acopio y packing", color: C_RED[1], vals: S.cases.map((x, i) => conv(C[i].acopio + x.packing)) },
     { name: "Aduanas y maniobras", color: C_RED[2], vals: S.cases.map((x, i) => conv(x.maniobras + x.agentes)) },
     { name: "Gastos operativos", color: C_RED[3], vals: S.cases.map((x, i) => conv(x.gastos)) },
-    { name: "Cobro Redwood", color: "var(--muted)", vals: S.cases.map((x, i) => conv(C[i].cobro)) }
+    { name: "Cobro Refinería", color: "var(--muted)", vals: S.cases.map((x, i) => conv(C[i].cobro)) }
   ];
 }
 
@@ -720,7 +752,7 @@ function genCharts(C) {
     chartFig(`$/kg compra vs $/kg venta (${cu}/kg)`, "Margen por kilogramo en cada caso.",
       { labels, series: [
           { name: "$/kg compra", color: "var(--red)", vals: C.map(x => conv(x.compraKg)) },
-          { name: "$/kg venta", color: "var(--black)", vals: S.cases.map(x => conv(x.ventaKg)) }
+          { name: "$/kg venta", color: "var(--black)", vals: C.map(x => conv(x.ventaKg)) }
         ], kind: "kg" }),
     chartFig("% de ganancia por caso", "Ganancia como porcentaje de la venta.",
       { labels, series: [{ name: "% ganancia", color: "var(--green)", vals: C.map(x => Number.isFinite(x.pct) ? x.pct * 100 : 0) }], kind: "pct" })
@@ -753,7 +785,7 @@ function analysisTolling(T) {
 }
 
 function analysisGen(C, kg) {
-  const idx = C.map((_, i) => i).filter(i => S.cases[i].ventaKg > 0 || C[i].costos > 0);
+  const idx = C.map((_, i) => i).filter(i => C[i].venta > 0 || C[i].costos > 0);
   if (!kg) return ["Captura el peso de los materiales en el listado de Generales para generar el análisis."];
   const out = [];
   const wc = S.materials.reduce((a, m) => a + m.compra * m.peso, 0) / kg;
@@ -767,7 +799,7 @@ function analysisGen(C, kg) {
   if (losses.length) out.push(`Alerta: los casos ${losses.map(i => i + 1).join(", ")} generan pérdida; sus costos superan la venta.`);
   const margin = idx.filter(i => Number.isFinite(C[i].compraKg));
   if (margin.length) {
-    const mv = i => S.cases[i].ventaKg - C[i].compraKg;
+    const mv = i => C[i].ventaKg - C[i].compraKg;
     const ml = argmin(C, margin, mv), mh = argmax(C, margin, mv);
     out.push(`El margen por kilogramo va de ${fm(mv(ml))} (Caso ${ml + 1}) a ${fm(mv(mh))} (Caso ${mh + 1}).`);
   }
@@ -783,7 +815,7 @@ function renderReport() {
   setTxt("#h-ref", r.ref || "—");
 
   const tIdx = T.map((_, i) => i).filter(i => T[i].total > 0);
-  const gIdx = C.map((_, i) => i).filter(i => S.cases[i].ventaKg > 0 || C[i].costos > 0);
+  const gIdx = C.map((_, i) => i).filter(i => C[i].venta > 0 || C[i].costos > 0);
   const lines = [];
   if (tIdx.length) {
     const lo = argmin(T, tIdx, i => T[i].total), hi = argmax(T, tIdx, i => T[i].total);
@@ -814,7 +846,7 @@ function renderReport() {
     ["Ganancia", "final", C.map(c => fm(c.ganancia))],
     ["% ganancia", "pctc", C.map(c => pctTxt(c.pct))],
     ["$/kg compra", "gasto", C.map(c => fm(c.compraKg))],
-    ["$/kg venta", "venta", S.cases.map(c => fm(c.ventaKg))]
+    ["$/kg venta", "venta", C.map(c => fm(c.ventaKg))]
   ];
   $("#rep-generales").innerHTML = `<h2>3. Modelo Generales</h2>
     <div class="tabla-wrap"><table class="rep"><thead><tr><th style="text-align:left">Concepto</th>${S.cases.map((_, i) => `<th>Caso ${i + 1}</th>`).join("")}</tr></thead>
@@ -834,7 +866,7 @@ function renderReport() {
   $("#rep-supuestos").innerHTML = `<h2>5. Supuestos y datos de referencia</h2>
     <ul class="hallazgos">
       <li>Tipo de cambio: ${num(S.rate)} MXN por USD ${S.rateDate ? `(FIX Banxico del ${esc(S.rateDate)})` : "(captura manual o referencia)"}.</li>
-      <li>Cobro Redwood: ${num(S.cobro.val)} ${S.cobro.cur} por kg, convertido a MXN con el tipo de cambio.</li>
+      <li>Cobro Refinería: ${num(S.cobro.val)} ${S.cobro.cur} por kg, convertido a MXN con el tipo de cambio.</li>
       <li>Acopio: 1.2 × kilogramos en ambos modelos. Cantidad de Generales: suma del listado de baterías (${num(kg)} kg).</li>
       <li>Los montos en USD son conversiones con el tipo de cambio indicado; no son precios de mercado de dólares.</li>
     </ul>`;
@@ -1063,8 +1095,14 @@ document.addEventListener("input", e => {
     const m = S.materials[i];
     if (el.dataset.m === "name") m.name = el.value; else m[el.dataset.m] = n(el.value);
     refreshMaterials(); refreshCases(); refreshComparador(); save();
+  } else if (el.dataset.x !== undefined) {
+    S.extras[+el.dataset.x].vals[i] = n(el.value);
+    refreshCases(); refreshComparador(); save();
+  } else if (el.dataset.xn !== undefined) {
+    S.extras[+el.dataset.xn].name = el.value;
+    save();
   } else if (el.dataset.g) {
-    S.cases[i][el.dataset.g] = n(el.value);
+    S.cases[i][el.dataset.g] = el.dataset.g === "cobroManual" ? (el.value === "" ? null : n(el.value)) : n(el.value);
     refreshCases(); refreshComparador(); save();
   } else if (el.dataset.rep) {
     S.rep[el.dataset.rep] = el.value;
@@ -1091,9 +1129,6 @@ document.addEventListener("change", e => {
     S.tolling[i].pct = el.value === "" ? null : parseFloat(el.value);
     S.tolling[i].coordManual = null;
     refreshTolling(); refreshComparador(); save();
-  } else if (el.dataset.g === "cobroMode") {
-    S.cases[i].cobroMode = el.value;
-    refreshCases(); refreshComparador(); save();
   } else if (el.id === "cobro-cur") {
     S.cobro.cur = el.value;
     refreshCobro(); refreshCases(); refreshComparador(); save();
@@ -1130,6 +1165,25 @@ document.addEventListener("click", e => {
     renderMaterials(); refreshCases(); refreshComparador(); save();
     return;
   }
+  if (b.dataset.gcopyTo !== undefined) {
+    const to = +b.dataset.gcopyTo;
+    const from = +b.parentElement.querySelector("select").value;
+    // Copia costos, refinería manual y $/kg manual del caso origen; también los gastos adicionales
+    S.cases[to] = { ...S.cases[from] };
+    S.extras.forEach(x => { x.vals[to] = x.vals[from] || 0; });
+    renderCases(); refreshComparador(); save();
+    return;
+  }
+  if (b.dataset.xadd !== undefined) {
+    S.extras.push({ name: "", vals: S.cases.map(() => 0) });
+    renderCases(); refreshComparador(); save();
+    return;
+  }
+  if (b.dataset.xdel !== undefined) {
+    S.extras.splice(+b.dataset.xdel, 1);
+    renderCases(); refreshComparador(); save();
+    return;
+  }
   if (b.dataset.clear !== undefined) {
     const cv = document.querySelector(`canvas[data-canvas="${b.dataset.clear}"]`);
     if (cv) cv._clear();
@@ -1153,6 +1207,7 @@ document.addEventListener("click", e => {
     case "btn-banxico": actualizarDolar(); break;
     case "t-clear": armConfirm(b, () => { blankTolling(); renderTolling(); refreshComparador(); save(); }); break;
     case "g-clear": armConfirm(b, () => { blankGeneral(); renderMaterials(); renderCases(); refreshCobro(); refreshCobroInput(); refreshComparador(); save(); }); break;
+    case "m-clear": armConfirm(b, () => { S.materials = blankMaterials(); renderMaterials(); refreshCases(); refreshComparador(); save(); }); break;
     case "m-add":
       S.materials.push({ name: "", compra: 0, venta: 0, peso: 0 });
       renderMaterials(); refreshCases(); refreshComparador(); save(); break;
