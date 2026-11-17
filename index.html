@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cotizador de servicios NIU NIU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Paleta: morado de marca como acento; rojo = gasto, negro = venta, azul = total/ganancia, verde = % */
+:root{
+  --bg:#F4F3F7; --surface:#FFFFFF; --surface-2:#EEEBF5; --text:#16141B; --muted:#6C6878; --line:#DEDAE8;
+  --accent:#674EA7; --accent-ink:#FFFFFF; --red:#C62828; --black:#16141B; --blue:#1F5FBF; --green:#138A00;
+  --input-bg:#FFFFFF; --focus:#674EA7; --logo-filter:none;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121117; --surface:#1B1A22; --surface-2:#24222E; --text:#ECEAF2; --muted:#9A95A8; --line:#34313F;
+    --accent:#A98BE0; --accent-ink:#121117; --red:#FF6B6B; --black:#ECEAF2; --blue:#6EA8FF; --green:#20D500;
+    --input-bg:#15141B; --focus:#A98BE0; --logo-filter:invert(1);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121117; --surface:#1B1A22; --surface-2:#24222E; --text:#ECEAF2; --muted:#9A95A8; --line:#34313F;
+  --accent:#A98BE0; --accent-ink:#121117; --red:#FF6B6B; --black:#ECEAF2; --blue:#6EA8FF; --green:#20D500;
+  --input-bg:#15141B; --focus:#A98BE0; --logo-filter:invert(1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.45 "Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{height:26px;width:auto;filter:var(--logo-filter)}
+h1{font-size:18px;margin:0;font-weight:700}
+h2{font-size:16px;margin:0 0 4px}
+h3{font-size:15px;margin:16px 0 8px}
+main{padding:20px;max-width:1280px;margin:0 auto;display:grid;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.muted{color:var(--muted);font-size:13px}
+.fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end}
+.fx-inline{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.f{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding-bottom:8px}
+input,select{font:inherit;color:var(--text);background:var(--input-bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible,.tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn{font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.tabs-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{font:inherit;font-weight:600;cursor:pointer;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:7px 16px}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.status{font-size:13px;color:var(--muted);min-height:1.3em;margin:10px 0 0}
+.status.err{color:var(--red)}
+.status.ok{color:var(--green)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.grid,table.rep{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums}
+table.grid{min-width:760px}
+.grid th,.grid td,.rep th,.rep td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+.grid thead th,.rep thead th{background:var(--surface-2);font-size:13px;color:var(--muted);text-align:center;font-weight:600}
+.grid tbody th,.rep tbody th{text-align:left;font-weight:600;background:var(--surface);position:sticky;left:0;z-index:1}
+.rep tbody th{position:static}
+.grid tr.grp th{background:var(--surface-2);color:var(--accent);text-align:left;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+.grid tr.copy-row td,.grid tr.copy-row th{background:var(--surface-2)}
+.grid input[type=number]{width:120px;text-align:right}
+.grid input[type=text].name{width:170px}
+.grid select{padding:5px 6px}
+.gasto{color:var(--red)}
+.venta{color:var(--black)}
+.final{color:var(--blue);font-weight:700}
+.pctc{color:var(--green);font-weight:700}
+.grid input.gasto,.grid select.gasto{color:var(--red)}
+.grid input.venta{color:var(--black)}
+.mode{display:block;font-size:12px;color:var(--muted);margin-top:4px;text-align:right}
+.coord-cell{display:grid;gap:4px;justify-items:end}
+.copy{display:flex;gap:6px;justify-content:center;align-items:center}
+.copy select{max-width:150px}
+.bar-row{display:grid;grid-template-columns:120px 1fr minmax(180px,auto);gap:12px;align-items:center;margin:9px 0;font-size:14px}
+.bar-track{background:var(--surface-2);border-radius:6px;height:14px;overflow:hidden}
+.bar{height:100%;background:var(--blue);border-radius:6px}
+.bar-row .final{text-align:right;white-space:nowrap}
+.leyenda{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.leyenda b{font-weight:700}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;margin-top:14px}
+figure.chart{margin:0;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+figure.chart figcaption{font-weight:700;font-size:14px;margin-bottom:6px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.hidden{display:none !important}
+
+/* ---------- reporte ---------- */
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 32px}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:6px}
+.sheet-head .logo{height:34px}
+.sheet-head h1{font-size:20px;color:var(--text)}
+.meta{font-size:13px;color:var(--muted);text-align:right;line-height:1.6}
+.sheet h2{font-size:17px;margin:22px 0 8px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:4px}
+.sheet ul.hallazgos{margin:6px 0 0 18px;padding:0}
+.sheet ul.hallazgos li{margin:4px 0}
+.sheet .tabla-wrap{overflow-x:auto;margin-top:8px}
+table.rep{min-width:0}
+.rep th,.rep td{font-size:13px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.chart-grid figure.chart{break-inside:avoid}
+.firmas{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px;break-inside:avoid}
+.sig{border:1px dashed var(--line);border-radius:10px;padding:10px;display:grid;gap:8px;align-content:start;break-inside:avoid}
+.sig-title{font-weight:700;color:var(--accent);font-size:14px}
+.sig-area{min-height:124px;display:grid;align-content:start}
+.sig-e .seal{font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-line;line-height:1.4}
+.sig-canvas{width:100%;max-width:360px;height:auto;aspect-ratio:3/1;border:1px solid var(--line);border-radius:6px;background:#fff;touch-action:none;cursor:crosshair}
+.sig-img{max-width:100%;max-height:120px;object-fit:contain;display:block}
+.sig-field{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:4px 2px;text-align:center}
+.sig-linea{border-top:1px solid var(--text);margin-top:6px;padding-top:4px;font-size:12px;color:var(--muted)}
+.print-status{font-size:13px;color:var(--muted);margin-top:8px}
+.note-ctrl{font-size:13px;color:var(--muted);margin:6px 0 0}
+@media (max-width:760px){ .firmas,.chart-grid{grid-template-columns:1fr} main{padding:12px} .sheet{padding:18px} }
+
+/* ---------- impresión: solo el reporte, siempre en claro ---------- */
+@page{size:A4;margin:14mm}
+@media print{
+  :root:not([data-theme="dark"]), :root[data-theme="dark"]{
+    --bg:#fff; --surface:#fff; --surface-2:#f2f2f2; --text:#000; --muted:#444; --line:#bbb; --accent:#674EA7; --accent-ink:#fff;
+    --red:#C62828; --black:#000; --blue:#1F5FBF; --green:#138A00; --input-bg:#fff; --focus:#000; --logo-filter:none;
+  }
+  html,body{background:#fff;color:#000}
+  .noprint,header.top,nav.tabs,.tabs-row,main>section:not(#p-report){display:none !important}
+  #p-report{display:block !important}
+  main{padding:0;max-width:none}
+  .sheet{border:0;padding:0;border-radius:0}
+  .card,.sheet{box-shadow:none}
+  .sheet h2{break-after:avoid}
+  .chart-grid figure.chart,.firmas .sig,table.rep,.sig-canvas{break-inside:avoid}
+  .sig-field{border-bottom:1px solid #000}
+  .sig-canvas{border:1px solid #999}
+  .page-break{break-before:page}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <img class="logo" src="niu_niu-logo-black-2023-2048x255.png" alt="NIU NIU">
+    <h1>Cotizador de servicios</h1>
+  </div>
+  <button class="btn ghost sm" id="theme" type="button">Modo oscuro</button>
+</header>
+
+<main>
+
+  <section class="card noprint" aria-labelledby="fx-h">
+    <h2 id="fx-h">Tipo de cambio USD / MXN</h2>
+    <p class="muted" style="margin:0 0 12px">El token de Banxico se usa solo para consultar el tipo de cambio FIX (serie SF43718). Si la consulta no está disponible, captura el dato a mano.</p>
+    <div class="fx">
+      <label class="f">Token de Banxico
+        <input id="token" type="password" autocomplete="off" placeholder="Pega tu token">
+      </label>
+      <label class="chk"><input id="remember" type="checkbox"> Recordar token en este navegador</label>
+      <button class="btn" id="btn-banxico" type="button">Actualizar dólar (Banxico)</button>
+      <label class="f">TC FIX (MXN por 1 USD)
+        <input id="rate" type="number" step="0.0001" inputmode="decimal">
+      </label>
+    </div>
+    <p class="status" id="fx-status" role="status"></p>
+    <div class="fx" style="margin-top:14px">
+      <label class="f">Monto
+        <input id="conv-monto" type="number" step="any" inputmode="decimal" value="1000">
+      </label>
+      <label class="f">Conversión
+        <select id="conv-dir">
+          <option value="usd-mxn">USD → MXN</option>
+          <option value="mxn-usd">MXN → USD</option>
+        </select>
+      </label>
+      <div class="f">Resultado
+        <strong id="conv-out" class="final" style="font-size:17px"></strong>
+      </div>
+    </div>
+  </section>
+
+  <div class="tabs-row noprint">
+    <nav class="tabs" role="tablist" aria-label="Secciones">
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-tolling" type="button">Tolling</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-gen" type="button">Generales</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-comp" type="button">Comparador</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-report" type="button">Reportes</button>
+    </nav>
+    <label class="f">Moneda de gráficas y reporte
+      <select id="cur">
+        <option value="MXN">MXN</option>
+        <option value="USD">USD</option>
+      </select>
+    </label>
+  </div>
+
+  <!-- TOLLING -->
+  <section class="card panel" id="p-tolling" role="tabpanel">
+    <div class="toolbar">
+      <div>
+        <h2>Tolling: 5 propuestas</h2>
+        <p class="muted" style="margin:0">Coordinación operativa = subtotal × % seleccionado. Si escribes un monto, reemplaza el % de esa propuesta.</p>
+      </div>
+      <button class="btn danger noprint" id="t-clear" type="button">Borrar información</button>
+    </div>
+    <div class="scroll" id="t-wrap"></div>
+    <div class="leyenda">
+      <span><b class="gasto">Rojo</b> = gasto</span>
+      <span><b class="venta">Negro</b> = venta</span>
+      <span><b class="final">Azul</b> = total</span>
+      <span><b class="pctc">Verde</b> = % de coordinación sobre total</span>
+    </div>
+  </section>
+
+  <!-- GENERALES -->
+  <section class="panel hidden" id="p-gen" role="tabpanel">
+    <section class="card">
+      <div class="toolbar">
+        <div>
+          <h2>Listado de baterías</h2>
+          <p class="muted" style="margin:0">Elige un material del listado del Excel o escribe uno manual. El peso de todas las filas se suma y alimenta la cantidad (kg) de los casos.</p>
+        </div>
+        <div class="row-btns noprint">
+          <button class="btn ghost sm" id="m-add" type="button">+ Material</button>
+        </div>
+      </div>
+      <div class="scroll" id="m-wrap"></div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <div class="toolbar">
+        <div>
+          <h2>Costos, venta y ganancia por caso</h2>
+          <p class="muted" style="margin:0">Cobro Redwood: captura el valor en una moneda y se convierte con el tipo de cambio.</p>
+        </div>
+        <div class="fx-inline">
+          <label class="f">Cobro Redwood por kg
+            <input id="cobro-val" type="number" step="any" inputmode="decimal">
+          </label>
+          <label class="f">Moneda
+            <select id="cobro-cur">
+              <option value="USD">USD</option>
+              <option value="MXN">MXN</option>
+            </select>
+          </label>
+          <span class="muted" id="cobro-other" style="padding-bottom:9px"></span>
+          <button class="btn danger" id="g-clear" type="button">Borrar información</button>
+        </div>
+      </div>
+      <div class="scroll" id="g-wrap"></div>
+      <div class="leyenda">
+        <span><b class="gasto">Rojo</b> = gasto</span>
+        <span><b class="venta">Negro</b> = venta</span>
+        <span><b class="final">Azul</b> = total y ganancia</span>
+        <span><b class="pctc">Verde</b> = % de ganancia</span>
+      </div>
+    </section>
+  </section>
+
+  <!-- COMPARADOR -->
+  <section class="card panel hidden" id="p-comp" role="tabpanel">
+    <div class="toolbar">
+      <div>
+        <h2>Comparador de 5 opciones</h2>
+        <p class="muted" style="margin:0">Cada cifra aparece en pesos (MXN) y en dólares (USD) con el tipo de cambio vigente.</p>
+      </div>
+      <label class="f">Servicio
+        <select id="svc">
+          <option value="tolling">Tolling</option>
+          <option value="gen">Generales</option>
+        </select>
+      </label>
+    </div>
+    <div class="scroll" id="c-wrap"></div>
+    <h3 id="bars-title"></h3>
+    <div id="c-bars"></div>
+    <h3>Gráficas para análisis</h3>
+    <div class="charts" id="c-charts"></div>
+  </section>
+
+  <!-- REPORTES -->
+  <section class="panel hidden" id="p-report" role="tabpanel">
+    <div class="card noprint">
+      <div class="toolbar">
+        <div>
+          <h2>Reporte para impresión</h2>
+          <p class="note-ctrl">Incluye ambos modelos, análisis, gráficas y tres espacios de firma. Usa «Imprimir / Guardar PDF» y elige guardar como PDF.</p>
+        </div>
+        <button class="btn" id="btn-print" type="button">Imprimir / Guardar PDF</button>
+      </div>
+      <div class="fx">
+        <label class="f">Cliente
+          <input type="text" data-rep="cliente" placeholder="Nombre del cliente">
+        </label>
+        <label class="f">Folio
+          <input type="text" data-rep="folio">
+        </label>
+        <label class="f">Fecha
+          <input type="date" data-rep="fecha">
+        </label>
+        <label class="f">Proyecto o referencia
+          <input type="text" data-rep="ref" placeholder="Opcional">
+        </label>
+      </div>
+      <p class="print-status" id="print-status" role="status"></p>
+    </div>
+
+    <article class="sheet" id="sheet" aria-label="Reporte de cotización">
+      <header class="sheet-head">
+        <div>
+          <img class="logo" src="niu_niu-logo-black-2023-2048x255.png" alt="NIU NIU">
+        </div>
+        <div>
+          <h1>Reporte de cotización de servicios</h1>
+          <div class="meta">
+            <div>Cliente: <span id="h-cliente">—</span></div>
+            <div>Folio: <span id="h-folio">—</span></div>
+            <div>Fecha: <span id="h-fecha">—</span></div>
+            <div>Referencia: <span id="h-ref">—</span></div>
+          </div>
+        </div>
+      </header>
+
+      <section id="rep-resumen"></section>
+      <section id="rep-tolling"></section>
+      <section id="rep-generales" class="page-break"></section>
+      <section id="rep-comp" class="page-break"></section>
+      <section id="rep-supuestos"></section>
+
+      <section>
+        <h2>Autorizaciones</h2>
+        <div class="firmas" id="sig-wrap"></div>
+      </section>
+    </article>
+  </section>
+
+</main>
+
+<script>
+(function(){
+"use strict";
+
+const STORE = "niu-cotizador-v2";
+const TOKEN_KEY = "niu-banxico-token";
+const THEME_KEY = "niu-cotizador-theme";
+const BANXICO_URL = "https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43718/datos/oportuno";
+const PCTS = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50];
+const MAT_LIST = ["LCO","LMO","LTO","NCA Celda","NCA Modulo","NCA Pack","NMC EVs Celda","NMC EVs Modulo","NMC EVs Pack","NMC Mix","ESS Packs","LFO"];
+const SIG_ROLES = ["Elaboró","Revisó","Autorizó"];
+const C_RED = ["#C62828","#EF5350","#8B2020","#FF9E9E"];
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
+const round2 = v => Number.isFinite(v) ? Math.round(v * 100) / 100 : "";
+const num = v => Number.isFinite(v) ? v.toLocaleString("es-MX", { maximumFractionDigits: 2 }) : "—";
+const money = (v, cur) => Number.isFinite(v) ? new Intl.NumberFormat("es-MX", { style: "currency", currency: cur }).format(v) : "—";
+const pctTxt = v => Number.isFinite(v) ? (v * 100).toFixed(2) + "%" : "—";
+const setTxt = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+const cur = () => $("#cur").value;
+const conv = v => cur() === "USD" ? v / rateOrNaN() : v;
+const fm = v => money(conv(v), cur());
+
+/* ---------- estado ---------- */
+function defaults() {
+  return {
+    rate: 17.5,
+    rateDate: "",
+    rep: { cliente: "", folio: "", fecha: new Date().toISOString().slice(0, 10), ref: "" },
+    tolling: [0,1,2,3,4].map(() => ({ kg: 20000, transporte: 70000, packing: 4000, rp: 60000, maniobras: 22000, agentes: 21000, gastos: 12000, pct: null, coordManual: null })),
+    materials: MAT_LIST.slice(0, 10).map(name => ({ name, compra: 0, venta: 0, peso: 0 })),
+    cobro: { cur: "USD", val: 0.56 },
+    cases: [
+      { ventaKg: 35,   cobroMode: "kg",   cobroFijo: 0 },
+      { ventaKg: 40,   cobroMode: "kg",   cobroFijo: 0 },
+      { ventaKg: 45,   cobroMode: "kg",   cobroFijo: 0 },
+      { ventaKg: 26.5, cobroMode: "fijo", cobroFijo: 100000 },
+      { ventaKg: 18,   cobroMode: "fijo", cobroFijo: 0 }
+    ].map(c => ({ ...c, transporte: 70000, packing: 4000, rp: 60000, maniobras: 22000, agentes: 21000, gastos: 12000 }))
+  };
+}
+let S = defaults();
+function load() {
+  try { const raw = localStorage.getItem(STORE); if (raw) S = { ...defaults(), ...JSON.parse(raw) }; } catch (e) {}
+}
+function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
+
+function blankTolling() {
+  S.tolling = [0,1,2,3,4].map(() => ({ kg: 0, transporte: 0, packing: 0, rp: 0, maniobras: 0, agentes: 0, gastos: 0, pct: null, coordManual: null }));
+}
+function blankGeneral() {
+  S.materials = S.materials.map(m => ({ ...m, compra: 0, venta: 0, peso: 0 }));
+  S.cases = S.cases.map(() => ({ ventaKg: 0, cobroMode: "kg", cobroFijo: 0, transporte: 0, packing: 0, rp: 0, maniobras: 0, agentes: 0, gastos: 0 }));
+  S.cobro = { cur: "USD", val: 0 };
+}
+
+/* ---------- cálculos ---------- */
+const rateOrNaN = () => S.rate > 0 ? S.rate : NaN;
+const toUSD = mxn => mxn / rateOrNaN();
+const kgTotal = () => S.materials.reduce((a, m) => a + m.peso, 0);
+const cobroKgMXN = () => S.cobro.cur === "MXN" ? S.cobro.val : S.cobro.val * rateOrNaN();
+
+function calcT(t) {
+  const acopio = 1.2 * t.kg;
+  const sub = t.transporte + acopio + t.packing + t.rp + t.maniobras + t.agentes + t.gastos;
+  const coord = t.coordManual != null ? t.coordManual : (t.pct != null ? sub * t.pct : 0);
+  const total = sub + coord;
+  return { acopio, sub, coord, total, totalUSD: toUSD(total), pct: total ? coord / total : NaN };
+}
+
+function calcC(c, kg) {
+  const acopio = 1.2 * kg;
+  const cobro = c.cobroMode === "fijo" ? c.cobroFijo : cobroKgMXN() * kg;
+  const costos = c.transporte + acopio + c.packing + c.rp + c.maniobras + c.agentes + c.gastos + cobro;
+  const compraKg = kg ? costos / kg : NaN;
+  const venta = kg * c.ventaKg;
+  const ganancia = venta - costos;
+  return {
+    acopio, cobro, costos, costosUSD: toUSD(costos), compraKg, compraKgUSD: toUSD(compraKg),
+    ventaKgUSD: toUSD(c.ventaKg), venta, ventaUSD: toUSD(venta), ganancia, gananciaUSD: toUSD(ganancia),
+    pct: venta ? ganancia / venta : NaN
+  };
+}
+
+/* ---------- TOLLING ---------- */
+const T_ROWS = [
+  ["kg", "Cantidad (kg)", "in", ""],
+  ["transporte", "Transporte Nacional", "in", "gasto"],
+  ["acopio", "Acopio (1.2 × kg)", "calc", "gasto"],
+  ["packing", "Packing", "in", "gasto"],
+  ["rp", "Transporte de RP a la Frontera", "in", "gasto"],
+  ["maniobras", "Maniobras en Frontera", "in", "gasto"],
+  ["agentes", "Agentes Aduanales", "in", "gasto"],
+  ["gastos", "Gastos operativos", "in", "gasto"],
+  ["sub", "Subtotal", "calc", "gasto"],
+  ["coord", "Coordinación Operativa", "coord", "venta"],
+  ["total", "Total (MXN)", "calc", "final"],
+  ["totalUSD", "Total (USD)", "calc", "final"],
+  ["pct", "% coordinación sobre total", "calc", "pctc"]
+];
+
+function renderTolling() {
+  const head = `<tr><th>Concepto</th>${S.tolling.map((_, i) => `<th>Propuesta ${i + 1}</th>`).join("")}</tr>`;
+  const copyRow = `<tr class="copy-row noprint"><th>Copiar datos de otra propuesta</th>${S.tolling.map((_, i) =>
+    `<td><div class="copy"><select aria-label="Propuesta origen para la ${i + 1}">${S.tolling.map((__, j) => j === i ? "" : `<option value="${j}">Propuesta ${j + 1}</option>`).join("")}</select><button class="btn sm ghost" type="button" data-copy-to="${i}">Copiar</button></div></td>`).join("")}</tr>`;
+  const body = T_ROWS.map(([k, label, type, cls]) => {
+    const cells = S.tolling.map((t, i) => {
+      if (type === "in") return `<td><input class="${cls}" type="number" step="any" inputmode="decimal" data-t="${k}" data-i="${i}" value="${t[k]}" aria-label="${esc(label)} propuesta ${i + 1}"></td>`;
+      if (type === "calc") return `<td class="${cls}" data-tc="${k}" data-i="${i}"></td>`;
+      return `<td class="venta"><div class="coord-cell">
+          <select data-t="pct" data-i="${i}" aria-label="Porcentaje de coordinación propuesta ${i + 1}">
+            <option value="">— %</option>${PCTS.map(p => `<option value="${p}"${t.pct === p ? " selected" : ""}>${Math.round(p * 100)}%</option>`).join("")}
+          </select>
+          <input class="venta" type="number" step="any" inputmode="decimal" data-t="coordManual" data-i="${i}" placeholder="monto" aria-label="Monto de coordinación propuesta ${i + 1}">
+          <span class="mode" data-tc="mode" data-i="${i}"></span>
+        </div></td>`;
+    }).join("");
+    return `<tr><th>${label}</th>${cells}</tr>`;
+  }).join("");
+  $("#t-wrap").innerHTML = `<table class="grid"><thead>${head}</thead><tbody>${copyRow}${body}</tbody></table>`;
+  refreshTolling();
+}
+
+function refreshTolling() {
+  S.tolling.forEach((t, i) => {
+    const c = calcT(t);
+    const at = k => `[data-tc="${k}"][data-i="${i}"]`;
+    setTxt(at("acopio"), num(c.acopio));
+    setTxt(at("sub"), money(c.sub, "MXN"));
+    setTxt(at("total"), money(c.total, "MXN"));
+    setTxt(at("totalUSD"), money(c.totalUSD, "USD"));
+    setTxt(at("pct"), pctTxt(c.pct));
+    setTxt(at("mode"), t.coordManual != null ? "Monto manual" : (t.pct != null ? "Auto: " + Math.round(t.pct * 100) + "% del subtotal" : "Sin % seleccionado"));
+    const m = document.querySelector(`input[data-t="coordManual"][data-i="${i}"]`);
+    if (m && document.activeElement !== m) m.value = t.coordManual != null ? t.coordManual : round2(c.coord);
+  });
+}
+
+/* ---------- GENERALES ---------- */
+function renderMaterials() {
+  const rows = S.materials.map((m, i) => `<tr>
+      <td><input type="text" class="name" list="mat-list" data-m="name" data-i="${i}" value="${esc(m.name)}" placeholder="Escribe o elige" aria-label="Nombre del material ${i + 1}"></td>
+      <td><input class="gasto" type="number" step="any" inputmode="decimal" data-m="compra" data-i="${i}" value="${m.compra}" aria-label="Compra MXN/kg fila ${i + 1}"></td>
+      <td class="gasto" data-mc="compraUSD" data-i="${i}"></td>
+      <td><input class="venta" type="number" step="any" inputmode="decimal" data-m="venta" data-i="${i}" value="${m.venta}" aria-label="Venta MXN/kg fila ${i + 1}"></td>
+      <td class="venta" data-mc="ventaUSD" data-i="${i}"></td>
+      <td><input type="number" step="any" inputmode="decimal" data-m="peso" data-i="${i}" value="${m.peso}" aria-label="Peso kg fila ${i + 1}"></td>
+      <td class="noprint"><button class="btn ghost sm" type="button" data-mrm="${i}" aria-label="Quitar fila ${i + 1}">×</button></td>
+    </tr>`).join("");
+  $("#m-wrap").innerHTML = `<datalist id="mat-list">${MAT_LIST.map(x => `<option value="${esc(x)}">`).join("")}</datalist>
+    <table class="grid">
+      <thead><tr><th style="text-align:left">Material</th><th>Compra (MXN/kg)</th><th>Compra (USD/kg)</th><th>Venta (MXN/kg)</th><th>Venta (USD/kg)</th><th>Peso (kg)</th><th class="noprint"></th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><th>Total / ponderado</th>
+        <th class="gasto" data-mt="compra"></th><th class="gasto" data-mt="compraUSD"></th>
+        <th class="venta" data-mt="venta"></th><th class="venta" data-mt="ventaUSD"></th>
+        <th data-mt="peso"></th><th class="noprint"></th></tr></tfoot>
+    </table>`;
+  refreshMaterials();
+}
+
+function refreshMaterials() {
+  const kg = kgTotal();
+  const wc = kg ? S.materials.reduce((a, m) => a + m.compra * m.peso, 0) / kg : NaN;
+  const wv = kg ? S.materials.reduce((a, m) => a + m.venta * m.peso, 0) / kg : NaN;
+  S.materials.forEach((m, i) => {
+    setTxt(`[data-mc="compraUSD"][data-i="${i}"]`, money(toUSD(m.compra), "USD"));
+    setTxt(`[data-mc="ventaUSD"][data-i="${i}"]`, money(toUSD(m.venta), "USD"));
+  });
+  setTxt('[data-mt="compra"]', money(wc, "MXN"));
+  setTxt('[data-mt="compraUSD"]', money(toUSD(wc), "USD"));
+  setTxt('[data-mt="venta"]', money(wv, "MXN"));
+  setTxt('[data-mt="ventaUSD"]', money(toUSD(wv), "USD"));
+  setTxt('[data-mt="peso"]', num(kg) + " kg");
+}
+
+const G_ROWS = [
+  ["kg", "Cantidad (kg), suma del listado", "calc", ""],
+  ["transporte", "Transporte Nacional", "in", "gasto"],
+  ["acopio", "Acopio (1.2 × kg)", "calc", "gasto"],
+  ["packing", "Packing", "in", "gasto"],
+  ["rp", "Transporte de RP a la Frontera", "in", "gasto"],
+  ["maniobras", "Maniobras en Frontera", "in", "gasto"],
+  ["agentes", "Agentes Aduanales", "in", "gasto"],
+  ["gastos", "Gastos operativos", "in", "gasto"],
+  ["cobro", "Cobro Redwood por procesamiento", "cobro", "gasto"],
+  ["costos", "Total costos (MXN)", "calc", "final"],
+  ["costosUSD", "Total costos (USD)", "calc", "final"],
+  ["compraKg", "$/kg compra (MXN)", "calc", "gasto"],
+  ["compraKgUSD", "$/kg compra (USD)", "calc", "gasto"],
+  ["ventaKg", "$/kg venta (MXN)", "in", "venta"],
+  ["ventaKgUSD", "$/kg venta (USD)", "calc", "venta"],
+  ["venta", "Venta total (MXN)", "calc", "venta"],
+  ["ventaUSD", "Venta total (USD)", "calc", "venta"],
+  ["ganancia", "Ganancia (MXN)", "calc", "final"],
+  ["gananciaUSD", "Ganancia (USD)", "calc", "final"],
+  ["pct", "% ganancia", "calc", "pctc"]
+];
+
+function renderCases() {
+  const head = `<tr><th>Concepto</th>${S.cases.map((_, i) => `<th>Caso ${i + 1}</th>`).join("")}</tr>`;
+  const body = G_ROWS.map(([k, label, type, cls]) => `<tr><th>${label}</th>${S.cases.map((c, i) => {
+    if (type === "in") return `<td><input class="${cls}" type="number" step="any" inputmode="decimal" data-g="${k}" data-i="${i}" value="${c[k]}" aria-label="${esc(label)} caso ${i + 1}"></td>`;
+    if (type === "cobro") return `<td class="gasto"><div class="coord-cell">
+        <select data-g="cobroMode" data-i="${i}" aria-label="Modo de cobro caso ${i + 1}">
+          <option value="kg"${c.cobroMode === "kg" ? " selected" : ""}>Por kg</option>
+          <option value="fijo"${c.cobroMode === "fijo" ? " selected" : ""}>Monto fijo</option>
+        </select>
+        <input class="gasto" type="number" step="any" inputmode="decimal" data-g="cobroFijo" data-i="${i}" value="${c.cobroFijo}" placeholder="monto MXN" aria-label="Monto fijo de cobro caso ${i + 1}">
+        <span data-gc="cobro" data-i="${i}"></span></div></td>`;
+    return `<td class="${cls}" data-gc="${k}" data-i="${i}"></td>`;
+  }).join("")}</tr>`).join("");
+  $("#g-wrap").innerHTML = `<table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  refreshCases();
+}
+
+function refreshCases() {
+  const kg = kgTotal();
+  S.cases.forEach((c, i) => {
+    const r = calcC(c, kg);
+    const put = {
+      kg: num(kg), acopio: num(1.2 * kg), cobro: money(r.cobro, "MXN"),
+      costos: money(r.costos, "MXN"), costosUSD: money(r.costosUSD, "USD"),
+      compraKg: money(r.compraKg, "MXN"), compraKgUSD: money(r.compraKgUSD, "USD"),
+      ventaKgUSD: money(r.ventaKgUSD, "USD"), venta: money(r.venta, "MXN"), ventaUSD: money(r.ventaUSD, "USD"),
+      ganancia: money(r.ganancia, "MXN"), gananciaUSD: money(r.gananciaUSD, "USD"), pct: pctTxt(r.pct)
+    };
+    for (const k in put) setTxt(`[data-gc="${k}"][data-i="${i}"]`, put[k]);
+  });
+}
+
+function refreshCobro() {
+  const other = S.cobro.cur === "USD"
+    ? money(S.cobro.val * rateOrNaN(), "MXN") + " por kg"
+    : money(toUSD(S.cobro.val), "USD") + " por kg";
+  setTxt("#cobro-other", "= " + other);
+}
+
+/* ---------- datos derivados para análisis, gráficas y reporte ---------- */
+function modelData() {
+  const kg = kgTotal();
+  const T = S.tolling.map(calcT);
+  const C = S.cases.map(c => calcC(c, kg));
+  return { kg, T, C };
+}
+
+function tollingSeries(T) {
+  const tv = S.tolling.map((x, i) => ({
+    tr: x.transporte + x.rp, ac: T[i].acopio + x.packing, ad: x.maniobras + x.agentes, go: x.gastos, co: T[i].coord
+  }));
+  return [
+    { name: "Transporte", color: C_RED[0], vals: tv.map(v => conv(v.tr)) },
+    { name: "Acopio y packing", color: C_RED[1], vals: tv.map(v => conv(v.ac)) },
+    { name: "Aduanas y maniobras", color: C_RED[2], vals: tv.map(v => conv(v.ad)) },
+    { name: "Gastos operativos", color: C_RED[3], vals: tv.map(v => conv(v.go)) },
+    { name: "Coordinación (venta)", color: "var(--black)", vals: tv.map(v => conv(v.co)) }
+  ];
+}
+
+function genSeries(C) {
+  return [
+    { name: "Transporte", color: C_RED[0], vals: S.cases.map((x, i) => conv(x.transporte + x.rp)) },
+    { name: "Acopio y packing", color: C_RED[1], vals: S.cases.map((x, i) => conv(C[i].acopio + x.packing)) },
+    { name: "Aduanas y maniobras", color: C_RED[2], vals: S.cases.map((x, i) => conv(x.maniobras + x.agentes)) },
+    { name: "Gastos operativos", color: C_RED[3], vals: S.cases.map((x, i) => conv(x.gastos)) },
+    { name: "Cobro Redwood", color: "var(--muted)", vals: S.cases.map((x, i) => conv(C[i].cobro)) }
+  ];
+}
+
+/* ---------- gráficas SVG ---------- */
+function niceStep(x) {
+  const p = Math.pow(10, Math.floor(Math.log10(x)));
+  const f = x / p;
+  const m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  return m * p;
+}
+function compact(v, kind) {
+  if (kind === "pct") return v.toFixed(1) + "%";
+  if (kind === "kg") return v.toFixed(2);
+  const a = Math.abs(v);
+  if (a >= 1e6) return (v / 1e6).toFixed(1) + " M";
+  if (a >= 1e3) return Math.round(v / 1e3) + " k";
+  return String(Math.round(v));
+}
+function svgChart(o) {
+  const W = 640, H = 300, pL = 62, pR = 12, pT = 16, pB = 44;
+  const iw = W - pL - pR, ih = H - pT - pB, nL = o.labels.length, ser = o.series;
+  const vals = ser.map(s => s.vals.map(v => Number.isFinite(v) ? v : 0));
+  let hi = 0, lo = 0;
+  if (o.stacked) {
+    for (let i = 0; i < nL; i++) {
+      let pos = 0, neg = 0;
+      vals.forEach(v => { if (v[i] >= 0) pos += v[i]; else neg += v[i]; });
+      hi = Math.max(hi, pos); lo = Math.min(lo, neg);
+    }
+  } else {
+    vals.forEach(v => v.forEach(x => { hi = Math.max(hi, x); lo = Math.min(lo, x); }));
+  }
+  if (hi === 0 && lo === 0) hi = 1;
+  const step = niceStep((hi - lo) / 5);
+  const top = Math.ceil(hi / step) * step, bot = Math.floor(lo / step) * step;
+  const Y = v => pT + (top - v) / (top - bot) * ih;
+  const gw = iw / nL;
+  let g = "";
+  for (let v = bot; v <= top + step / 2; v += step) {
+    const yy = Y(v);
+    g += `<line x1="${pL}" x2="${W - pR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--line)"/>`;
+    g += `<text x="${pL - 6}" y="${(yy + 4).toFixed(1)}" text-anchor="end" style="fill:var(--muted);font-size:11px">${compact(v, o.kind)}</text>`;
+  }
+  const y0 = Y(0);
+  g += `<line x1="${pL}" x2="${W - pR}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" style="stroke:var(--muted)"/>`;
+  for (let i = 0; i < nL; i++) {
+    const gx = pL + i * gw;
+    if (o.stacked) {
+      const bw = gw * 0.5, x = gx + (gw - bw) / 2;
+      let pos = 0, neg = 0;
+      ser.forEach((s, k) => {
+        const v = vals[k][i];
+        let ya, yb;
+        if (v >= 0) { ya = Y(pos + v); yb = Y(pos); pos += v; }
+        else { ya = Y(neg); yb = Y(neg + v); neg += v; }
+        const h = Math.abs(yb - ya);
+        if (h > 0) g += `<rect x="${x.toFixed(1)}" y="${Math.min(ya, yb).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" style="fill:${s.color}"><title>${esc(s.name)}: ${compact(v, o.kind)}</title></rect>`;
+      });
+      g += `<text x="${(x + bw / 2).toFixed(1)}" y="${(Y(pos) - 5).toFixed(1)}" text-anchor="middle" style="fill:var(--text);font-size:11px;font-weight:700">${compact(pos + neg, o.kind)}</text>`;
+    } else {
+      const m = ser.length;
+      const bw = Math.min(gw * 0.7 / m, 46);
+      const x0 = gx + (gw - bw * m) / 2;
+      ser.forEach((s, k) => {
+        const v = vals[k][i];
+        const x = x0 + k * bw;
+        const ya = Math.min(y0, Y(v)), h = Math.abs(Y(v) - y0);
+        if (h > 0) g += `<rect x="${(x + 2).toFixed(1)}" y="${ya.toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="${h.toFixed(1)}" style="fill:${s.color}"><title>${esc(s.name)}: ${compact(v, o.kind)}</title></rect>`;
+        const ly = v >= 0 ? Y(v) - 4 : Y(v) + 12;
+        g += `<text x="${(x + bw / 2).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" style="fill:var(--text);font-size:10px">${compact(v, o.kind)}</text>`;
+      });
+    }
+    g += `<text x="${(gx + gw / 2).toFixed(1)}" y="${H - pB + 18}" text-anchor="middle" style="fill:var(--text);font-size:12px">${esc(o.labels[i])}</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}" style="width:100%;height:auto;display:block">${g}</svg>`;
+}
+function chartFig(title, note, o) {
+  const legend = o.series.length > 1 || o.stacked
+    ? `<div class="legend">${o.series.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}</div>` : "";
+  return `<figure class="chart"><figcaption>${esc(title)}</figcaption>${svgChart({ ...o, title })}${legend}${note ? `<p class="muted" style="margin:6px 0 0">${esc(note)}</p>` : ""}</figure>`;
+}
+
+function tollingCharts(T) {
+  const labels = S.tolling.map((_, i) => "Prop. " + (i + 1));
+  const cu = cur();
+  return [
+    chartFig(`Composición del total por propuesta (${cu})`, "Barras apiladas: costos en rojo y coordinación en negro.",
+      { labels, series: tollingSeries(T), stacked: true, kind: "money" }),
+    chartFig("Coordinación operativa como % del total", "Qué parte del total corresponde a coordinación.",
+      { labels, series: [{ name: "% coordinación", color: "var(--green)", vals: T.map(t => Number.isFinite(t.pct) ? t.pct * 100 : 0) }], kind: "pct" }),
+    chartFig(`Costo por kg del servicio (${cu}/kg)`, "Total dividido entre la cantidad de cada propuesta.",
+      { labels, series: [{ name: "Total por kg", color: "var(--blue)", vals: S.tolling.map((x, i) => x.kg ? conv(T[i].total / x.kg) : 0) }], kind: "kg" })
+  ].join("");
+}
+
+function genCharts(C) {
+  const labels = S.cases.map((_, i) => "Caso " + (i + 1));
+  const cu = cur();
+  return [
+    chartFig(`Costos, venta y ganancia por caso (${cu})`, "Compara lo que cuesta cada caso con lo que se vende.",
+      { labels, series: [
+          { name: "Costos", color: "var(--red)", vals: C.map(x => conv(x.costos)) },
+          { name: "Venta", color: "var(--black)", vals: C.map(x => conv(x.venta)) },
+          { name: "Ganancia", color: "var(--blue)", vals: C.map(x => conv(x.ganancia)) }
+        ], kind: "money" }),
+    chartFig(`Composición de costos por caso (${cu})`, "Peso de cada rubro dentro del costo total.",
+      { labels, series: genSeries(C), stacked: true, kind: "money" }),
+    chartFig(`$/kg compra vs $/kg venta (${cu}/kg)`, "Margen por kilogramo en cada caso.",
+      { labels, series: [
+          { name: "$/kg compra", color: "var(--red)", vals: C.map(x => conv(x.compraKg)) },
+          { name: "$/kg venta", color: "var(--black)", vals: S.cases.map(x => conv(x.ventaKg)) }
+        ], kind: "kg" }),
+    chartFig("% de ganancia por caso", "Ganancia como porcentaje de la venta.",
+      { labels, series: [{ name: "% ganancia", color: "var(--green)", vals: C.map(x => Number.isFinite(x.pct) ? x.pct * 100 : 0) }], kind: "pct" })
+  ].join("");
+}
+
+/* ---------- análisis escrito ---------- */
+function argmax(arr, idxs, f) { let b = null; idxs.forEach(i => { if (b === null || f(i) > f(b)) b = i; }); return b; }
+function argmin(arr, idxs, f) { let b = null; idxs.forEach(i => { if (b === null || f(i) < f(b)) b = i; }); return b; }
+
+function analysisTolling(T) {
+  const idx = T.map((_, i) => i).filter(i => T[i].total > 0);
+  if (!idx.length) return ["Captura kg y costos de las propuestas para generar el análisis."];
+  const lo = argmin(T, idx, i => T[i].total), hi = argmax(T, idx, i => T[i].total);
+  const out = [];
+  out.push(`El total a cobrar va de ${fm(T[lo].total)} en la Propuesta ${lo + 1} a ${fm(T[hi].total)} en la Propuesta ${hi + 1}, una diferencia de ${fm(T[hi].total - T[lo].total)}.`);
+  const cIdx = idx.filter(i => Number.isFinite(T[i].pct));
+  if (cIdx.length) {
+    const pl = argmin(T, cIdx, i => T[i].pct), ph = argmax(T, cIdx, i => T[i].pct);
+    out.push(`La coordinación operativa representa entre ${pctTxt(T[pl].pct)} (Propuesta ${pl + 1}) y ${pctTxt(T[ph].pct)} (Propuesta ${ph + 1}) del total.`);
+  }
+  const perKg = idx.filter(i => S.tolling[i].kg > 0);
+  if (perKg.length) {
+    const kl = argmin(T, perKg, i => T[i].total / S.tolling[i].kg), kh = argmax(T, perKg, i => T[i].total / S.tolling[i].kg);
+    out.push(`El costo por kilogramo del servicio oscila entre ${fm(T[kl].total / S.tolling[kl].kg)} y ${fm(T[kh].total / S.tolling[kh].kg)}.`);
+  }
+  const manual = S.tolling.map((t, i) => t.coordManual != null ? i + 1 : null).filter(x => x);
+  if (manual.length) out.push(`Las propuestas ${manual.join(", ")} usan monto manual de coordinación en lugar de porcentaje.`);
+  return out;
+}
+
+function analysisGen(C, kg) {
+  const idx = C.map((_, i) => i).filter(i => S.cases[i].ventaKg > 0 || C[i].costos > 0);
+  if (!kg) return ["Captura el peso de los materiales en el listado de Generales para generar el análisis."];
+  const out = [];
+  const wc = S.materials.reduce((a, m) => a + m.compra * m.peso, 0) / kg;
+  const wv = S.materials.reduce((a, m) => a + m.venta * m.peso, 0) / kg;
+  const filled = S.materials.filter(m => m.peso > 0).length;
+  out.push(`El listado suma ${num(kg)} kg en ${filled} materiales. El precio de compra ponderado es ${fm(wc)} por kg y el de venta ponderado, ${fm(wv)} por kg.`);
+  if (!idx.length) return out;
+  const best = argmax(C, idx, i => C[i].ganancia), bestPct = argmax(C, idx, i => Number.isFinite(C[i].pct) ? C[i].pct : -Infinity);
+  out.push(`La mayor ganancia en pesos está en el Caso ${best + 1} (${fm(C[best].ganancia)}). El mayor porcentaje de ganancia está en el Caso ${bestPct + 1} (${pctTxt(C[bestPct].pct)}).`);
+  const losses = idx.filter(i => C[i].ganancia < 0);
+  if (losses.length) out.push(`Alerta: los casos ${losses.map(i => i + 1).join(", ")} generan pérdida; sus costos superan la venta.`);
+  const margin = idx.filter(i => Number.isFinite(C[i].compraKg));
+  if (margin.length) {
+    const mv = i => S.cases[i].ventaKg - C[i].compraKg;
+    const ml = argmin(C, margin, mv), mh = argmax(C, margin, mv);
+    out.push(`El margen por kilogramo va de ${fm(mv(ml))} (Caso ${ml + 1}) a ${fm(mv(mh))} (Caso ${mh + 1}).`);
+  }
+  return out;
+}
+
+function renderReport() {
+  const { kg, T, C } = modelData();
+  const r = S.rep;
+  setTxt("#h-cliente", r.cliente || "—");
+  setTxt("#h-folio", r.folio || "—");
+  setTxt("#h-fecha", r.fecha ? new Date(r.fecha + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" }) : "—");
+  setTxt("#h-ref", r.ref || "—");
+
+  const tIdx = T.map((_, i) => i).filter(i => T[i].total > 0);
+  const gIdx = C.map((_, i) => i).filter(i => S.cases[i].ventaKg > 0 || C[i].costos > 0);
+  const lines = [];
+  if (tIdx.length) {
+    const lo = argmin(T, tIdx, i => T[i].total), hi = argmax(T, tIdx, i => T[i].total);
+    lines.push(`<b>Tolling:</b> total entre ${fm(T[lo].total)} (Propuesta ${lo + 1}) y ${fm(T[hi].total)} (Propuesta ${hi + 1}).`);
+  } else lines.push("<b>Tolling:</b> sin datos capturados.");
+  if (gIdx.length && kg) {
+    const bp = argmax(C, gIdx, i => Number.isFinite(C[i].pct) ? C[i].pct : -Infinity);
+    lines.push(`<b>Generales:</b> mayor porcentaje de ganancia en el Caso ${bp + 1} (${pctTxt(C[bp].pct)}), con ganancia de ${fm(C[bp].ganancia)}.`);
+  } else lines.push("<b>Generales:</b> sin datos capturados.");
+  lines.push(`<b>Moneda del reporte:</b> ${cur()}, con tipo de cambio de ${num(S.rate)} MXN por USD.`);
+  $("#rep-resumen").innerHTML = `<h2>1. Resumen ejecutivo</h2><ul class="hallazgos">${lines.map(l => `<li>${l}</li>`).join("")}</ul>`;
+
+  const tRows = [
+    ["Gastos (subtotal)", "gasto", T.map(t => fm(t.sub))],
+    ["Coordinación operativa (venta)", "venta", T.map(t => fm(t.coord))],
+    ["Total a cobrar", "final", T.map(t => fm(t.total))],
+    ["% coordinación sobre total", "pctc", T.map(t => pctTxt(t.pct))]
+  ];
+  $("#rep-tolling").innerHTML = `<h2>2. Modelo Tolling</h2>
+    <div class="tabla-wrap"><table class="rep"><thead><tr><th style="text-align:left">Concepto</th>${S.tolling.map((_, i) => `<th>Propuesta ${i + 1}</th>`).join("")}</tr></thead>
+    <tbody>${tRows.map(([l, c, v]) => `<tr><th>${l}</th>${v.map(x => `<td class="${c}">${x}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <h3>Análisis</h3><ul class="hallazgos">${analysisTolling(T).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <h3>Gráficas</h3><div class="chart-grid">${tollingCharts(T)}</div>`;
+
+  const cRows = [
+    ["Costos", "gasto", C.map(c => fm(c.costos))],
+    ["Venta", "venta", C.map(c => fm(c.venta))],
+    ["Ganancia", "final", C.map(c => fm(c.ganancia))],
+    ["% ganancia", "pctc", C.map(c => pctTxt(c.pct))],
+    ["$/kg compra", "gasto", C.map(c => fm(c.compraKg))],
+    ["$/kg venta", "venta", S.cases.map(c => fm(c.ventaKg))]
+  ];
+  $("#rep-generales").innerHTML = `<h2>3. Modelo Generales</h2>
+    <div class="tabla-wrap"><table class="rep"><thead><tr><th style="text-align:left">Concepto</th>${S.cases.map((_, i) => `<th>Caso ${i + 1}</th>`).join("")}</tr></thead>
+    <tbody>${cRows.map(([l, c, v]) => `<tr><th>${l}</th>${v.map(x => `<td class="${c}">${x}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <h3>Análisis</h3><ul class="hallazgos">${analysisGen(C, kg).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <h3>Gráficas</h3><div class="chart-grid">${genCharts(C)}</div>`;
+
+  const ex = gIdx.length && kg ? argmax(C, gIdx, i => Number.isFinite(C[i].pct) ? C[i].pct : -Infinity) : null;
+  $("#rep-comp").innerHTML = `<h2>4. Comparación de modelos y lectura</h2>
+    <ul class="hallazgos">
+      <li>Tolling mide el costo de un servicio con coordinación operativa; Generales mide la ganancia sobre la venta de material. Por eso conviene comparar ambos por porcentaje y por costo por kilogramo, no solo por monto total.</li>
+      <li>${tIdx.length ? `En tolling, la propuesta con total más bajo es la ${argmin(T, tIdx, i => T[i].total) + 1}.` : "En tolling aún no hay datos para comparar."}</li>
+      <li>${ex !== null ? `En generales, el caso con mejor margen porcentual es el ${ex + 1}.` : "En generales aún no hay datos para comparar."}</li>
+      <li>Las cifras dependen del tipo de cambio y de los precios capturados; si cambian, el reporte se actualiza al generarse de nuevo.</li>
+    </ul>`;
+
+  $("#rep-supuestos").innerHTML = `<h2>5. Supuestos y datos de referencia</h2>
+    <ul class="hallazgos">
+      <li>Tipo de cambio: ${num(S.rate)} MXN por USD ${S.rateDate ? `(FIX Banxico del ${esc(S.rateDate)})` : "(captura manual o referencia)"}.</li>
+      <li>Cobro Redwood: ${num(S.cobro.val)} ${S.cobro.cur} por kg, convertido a MXN con el tipo de cambio.</li>
+      <li>Acopio: 1.2 × kilogramos en ambos modelos. Cantidad de Generales: suma del listado de baterías (${num(kg)} kg).</li>
+      <li>Los montos en USD son conversiones con el tipo de cambio indicado; no son precios de mercado de dólares.</li>
+    </ul>`;
+
+  renderCharts();
+  const content = ["#rep-resumen","#rep-tolling","#rep-generales","#rep-comp","#rep-supuestos"].map(s => $(s).textContent).join("|");
+  if (lastContent !== null && content !== lastContent) resetElectronic();
+  lastContent = content;
+}
+let lastContent = null;
+
+function renderCharts() {
+  const { T, C } = modelData();
+  const svc = $("#svc").value;
+  $("#c-charts").innerHTML = svc === "tolling" ? tollingCharts(T) : genCharts(C);
+}
+
+/* ---------- comparador (tabla y barras) ---------- */
+function refreshComparador() {
+  const svc = $("#svc").value;
+  const { kg, T, C } = modelData();
+  const mk = (label, cls, arr) => ({ label, cls, mxn: arr, usd: arr.map(v => toUSD(v)) });
+  let cols, metrics, pct, pctLabel, barVals, barTitle;
+  if (svc === "tolling") {
+    cols = T.map((_, i) => "Propuesta " + (i + 1));
+    metrics = [mk("Gastos (subtotal)", "gasto", T.map(x => x.sub)), mk("Coordinación (venta)", "venta", T.map(x => x.coord)), mk("Total", "final", T.map(x => x.total))];
+    pct = T.map(x => x.pct); pctLabel = "% coordinación sobre total";
+    barVals = T.map(x => x.total); barTitle = "Total por propuesta (MXN y USD)";
+  } else {
+    cols = C.map((_, i) => "Caso " + (i + 1));
+    metrics = [mk("Costos", "gasto", C.map(x => x.costos)), mk("Venta", "venta", C.map(x => x.venta)), mk("Ganancia", "final", C.map(x => x.ganancia))];
+    pct = C.map(x => x.pct); pctLabel = "% ganancia";
+    barVals = C.map(x => x.venta); barTitle = "Venta por caso (MXN y USD)";
+  }
+  const row = (label, cls, vals, f) => `<tr><th>${label}</th>${vals.map(v => `<td class="${cls}">${f(v)}</td>`).join("")}</tr>`;
+  const span = cols.length + 1;
+  let html = `<table class="grid"><thead><tr><th>Concepto</th>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>`;
+  html += `<tr class="grp"><th colspan="${span}">En pesos (MXN)</th></tr>`;
+  metrics.forEach(m => html += row(m.label, m.cls, m.mxn, v => money(v, "MXN")));
+  html += `<tr class="grp"><th colspan="${span}">En dólares (USD)</th></tr>`;
+  metrics.forEach(m => html += row(m.label, m.cls, m.usd, v => money(v, "USD")));
+  html += `<tr class="grp"><th colspan="${span}">Indicador</th></tr>`;
+  html += row(pctLabel, "pctc", pct, pctTxt);
+  html += "</tbody></table>";
+  $("#c-wrap").innerHTML = html;
+
+  const valid = barVals.filter(Number.isFinite);
+  const max = valid.length ? Math.max(...valid) : 0;
+  $("#bars-title").textContent = barTitle;
+  $("#c-bars").innerHTML = cols.map((c, i) => {
+    const v = barVals[i];
+    const w = max > 0 && Number.isFinite(v) ? Math.max(0, v / max * 100) : 0;
+    return `<div class="bar-row"><span>${c}</span><div class="bar-track"><div class="bar" style="width:${w.toFixed(1)}%"></div></div><span class="final">${money(v, "MXN")} · ${money(toUSD(v), "USD")}</span></div>`;
+  }).join("");
+  renderCharts();
+  renderReport();
+}
+
+/* ---------- tipo de cambio ---------- */
+function refreshRate() { $("#rate").value = S.rate; }
+function refreshConv() {
+  const amt = n($("#conv-monto").value);
+  const dir = $("#conv-dir").value;
+  $("#conv-out").textContent = dir === "usd-mxn" ? money(amt * rateOrNaN(), "MXN") : money(toUSD(amt), "USD");
+}
+function setFxStatus(msg, kind) {
+  const el = $("#fx-status");
+  el.textContent = msg;
+  el.className = "status" + (kind ? " " + kind : "");
+}
+function rateNote() {
+  if (S.rateDate) setFxStatus("Tipo de cambio FIX del " + S.rateDate + " (Banxico).", "ok");
+  else setFxStatus("Tipo de cambio de referencia (9.8 MXN ÷ 0.56 USD del Excel). Actualiza con Banxico o captúralo a mano.");
+}
+async function actualizarDolar() {
+  const token = $("#token").value.trim();
+  if (!token) { setFxStatus("Captura el token de Banxico para consultar el dólar.", "err"); return; }
+  try {
+    if ($("#remember").checked) localStorage.setItem(TOKEN_KEY, token); else localStorage.removeItem(TOKEN_KEY);
+  } catch (e) {}
+  setFxStatus("Consultando Banxico…");
+  try {
+    const resp = await fetch(BANXICO_URL, { headers: { "Bmx-Token": token } });
+    if (!resp.ok) throw new Error("respuesta " + resp.status);
+    const json = await resp.json();
+    const dato = json.bmx.series[0].datos[0];
+    const val = parseFloat(String(dato.dato).replace(",", ""));
+    if (!Number.isFinite(val)) throw new Error("dato no disponible");
+    S.rate = val; S.rateDate = dato.fecha;
+    save(); refreshRate(); refreshAll(); rateNote();
+  } catch (e) {
+    setFxStatus("No se pudo consultar Banxico (" + e.message + "). Revisa el token, la conexión o si el navegador bloquea la consulta. Puedes capturar el tipo de cambio a mano.", "err");
+  }
+}
+
+/* ---------- firmas ---------- */
+function renderSignatures() {
+  $("#sig-wrap").innerHTML = SIG_ROLES.map((role, i) => `<div class="sig" data-sig="${i}">
+      <div class="sig-title">${role}</div>
+      <label class="f noprint">Modo de firma
+        <select data-sigmode="${i}" aria-label="Modo de firma de ${role}">
+          <option value="e">Firma electrónica</option>
+          <option value="d">Firma dibujada</option>
+          <option value="f">Firma desde archivo</option>
+        </select>
+      </label>
+      <div class="sig-area">
+        <div data-mode-box="e">
+          <label class="chk noprint"><input type="checkbox" data-sigck="${i}"> Acepto firmar este reporte electrónicamente</label>
+          <div class="seal" data-seal="${i}"></div>
+        </div>
+        <div data-mode-box="d" class="hidden">
+          <canvas class="sig-canvas" data-canvas="${i}" width="360" height="120" aria-label="Área para firma dibujada de ${role}"></canvas>
+          <div class="noprint" style="margin-top:6px"><button class="btn ghost sm" type="button" data-clear="${i}">Limpiar firma</button></div>
+        </div>
+        <div data-mode-box="f" class="hidden">
+          <input class="noprint" type="file" accept="image/png,image/jpeg" data-file="${i}" aria-label="Archivo de firma de ${role}">
+          <img class="sig-img" data-img="${i}" alt="">
+        </div>
+      </div>
+      <input class="sig-field" type="text" placeholder="Nombre" data-signame="${i}" aria-label="Nombre de ${role}">
+      <input class="sig-field" type="text" placeholder="Cargo" data-sigcargo="${i}" aria-label="Cargo de ${role}">
+      <div class="sig-linea">${role}</div>
+    </div>`).join("");
+  document.querySelectorAll("canvas[data-canvas]").forEach(setupCanvas);
+  SIG_ROLES.forEach((_, i) => applySigMode(i));
+}
+
+function setupCanvas(cv) {
+  const ctx = cv.getContext("2d");
+  const paint = () => { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height); };
+  paint();
+  let drawing = false, last = null;
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+  cv.addEventListener("pointerdown", e => { drawing = true; last = pos(e); try { cv.setPointerCapture(e.pointerId); } catch (err) {} });
+  cv.addEventListener("pointermove", e => {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.strokeStyle = "#16141B"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+  });
+  const end = () => { drawing = false; };
+  cv.addEventListener("pointerup", end);
+  cv.addEventListener("pointercancel", end);
+  cv._clear = paint;
+}
+
+function applySigMode(i) {
+  const m = document.querySelector(`[data-sigmode="${i}"]`).value;
+  document.querySelectorAll(`[data-sig="${i}"] [data-mode-box]`).forEach(b => b.classList.toggle("hidden", b.dataset.modeBox !== m));
+  if (m === "e") refreshSeal(i);
+}
+
+let signedAt = {};
+async function sha256(text) {
+  try {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch (e) { return ""; }
+}
+function refreshSeal(i) {
+  const ck = document.querySelector(`[data-sigck="${i}"]`);
+  const seal = document.querySelector(`[data-seal="${i}"]`);
+  const name = document.querySelector(`[data-signame="${i}"]`).value.trim();
+  const cargo = document.querySelector(`[data-sigcargo="${i}"]`).value.trim();
+  if (!ck.checked || !name) {
+    signedAt[i] = null;
+    seal.textContent = ck.checked ? "Escribe el nombre para completar la firma." : "Marca la casilla para firmar electrónicamente.";
+    return;
+  }
+  if (!signedAt[i]) signedAt[i] = new Date();
+  const when = signedAt[i].toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
+  seal.textContent = `Firmado electrónicamente por: ${name}${cargo ? "\n" + cargo : ""}\nFecha y hora: ${when}`;
+  const payload = ["#rep-resumen","#rep-tolling","#rep-generales","#rep-comp","#rep-supuestos"].map(s => $(s).textContent).join("|") + "|" + name + "|" + signedAt[i].toISOString();
+  sha256(payload).then(h => { if (h && signedAt[i]) seal.textContent += `\nSello: ${h.slice(0, 16).toUpperCase()}…`; });
+}
+function resetElectronic() {
+  SIG_ROLES.forEach((_, i) => {
+    const ck = document.querySelector(`[data-sigck="${i}"]`);
+    if (ck && ck.checked) { ck.checked = false; signedAt[i] = null; refreshSeal(i); }
+  });
+}
+
+/* ---------- acciones ---------- */
+function armConfirm(btn, action) {
+  if (btn.dataset.armed) {
+    clearTimeout(btn._t);
+    btn.dataset.armed = "";
+    btn.textContent = btn.dataset.label;
+    action();
+  } else {
+    btn.dataset.armed = "1";
+    btn.dataset.label = btn.textContent;
+    btn.textContent = "Confirmar borrado";
+    btn._t = setTimeout(() => { btn.dataset.armed = ""; btn.textContent = btn.dataset.label; }, 4000);
+  }
+}
+function refreshAll() {
+  refreshTolling();
+  refreshMaterials();
+  refreshCases();
+  refreshCobro();
+  refreshConv();
+  refreshComparador();
+}
+function refreshCobroInput() { $("#cobro-val").value = S.cobro.val; $("#cobro-cur").value = S.cobro.cur; }
+function refreshRepInputs() {
+  document.querySelectorAll("[data-rep]").forEach(el => { el.value = S.rep[el.dataset.rep] || ""; });
+}
+function setThemeBtn() {
+  const cu = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  $("#theme").textContent = cu === "dark" ? "Modo claro" : "Modo oscuro";
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.tagName === "SELECT") return;
+  const i = +el.dataset.i;
+  if (el.dataset.t) {
+    const k = el.dataset.t;
+    S.tolling[i][k] = k === "coordManual" ? (el.value === "" ? null : n(el.value)) : n(el.value);
+    refreshTolling(); refreshComparador(); save();
+  } else if (el.dataset.m) {
+    const m = S.materials[i];
+    if (el.dataset.m === "name") m.name = el.value; else m[el.dataset.m] = n(el.value);
+    refreshMaterials(); refreshCases(); refreshComparador(); save();
+  } else if (el.dataset.g) {
+    S.cases[i][el.dataset.g] = n(el.value);
+    refreshCases(); refreshComparador(); save();
+  } else if (el.dataset.rep) {
+    S.rep[el.dataset.rep] = el.value;
+    renderReport(); save();
+  } else if (el.dataset.signame !== undefined) {
+    refreshSeal(+el.dataset.signame);
+  } else if (el.dataset.sigcargo !== undefined) {
+    refreshSeal(+el.dataset.sigcargo);
+  } else if (el.id === "cobro-val") {
+    S.cobro.val = n(el.value);
+    refreshCobro(); refreshCases(); refreshComparador(); save();
+  } else if (el.id === "rate") {
+    S.rate = n(el.value); S.rateDate = "";
+    refreshAll(); rateNote(); save();
+  } else if (el.id === "conv-monto") {
+    refreshConv();
+  }
+});
+
+document.addEventListener("change", e => {
+  const el = e.target;
+  const i = +el.dataset.i;
+  if (el.dataset.t === "pct") {
+    S.tolling[i].pct = el.value === "" ? null : parseFloat(el.value);
+    S.tolling[i].coordManual = null;
+    refreshTolling(); refreshComparador(); save();
+  } else if (el.dataset.g === "cobroMode") {
+    S.cases[i].cobroMode = el.value;
+    refreshCases(); refreshComparador(); save();
+  } else if (el.id === "cobro-cur") {
+    S.cobro.cur = el.value;
+    refreshCobro(); refreshCases(); refreshComparador(); save();
+  } else if (el.id === "conv-dir") {
+    refreshConv();
+  } else if (el.id === "svc" || el.id === "cur") {
+    refreshComparador();
+  } else if (el.dataset.sigmode !== undefined) {
+    applySigMode(+el.dataset.sigmode);
+  } else if (el.dataset.sigck !== undefined) {
+    refreshSeal(+el.dataset.sigck);
+  } else if (el.dataset.file !== undefined) {
+    const idx = +el.dataset.file;
+    const f = el.files && el.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { const img = document.querySelector(`[data-img="${idx}"]`); img.src = rd.result; };
+    rd.readAsDataURL(f);
+  }
+});
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.copyTo !== undefined) {
+    const to = +b.dataset.copyTo;
+    const from = +b.parentElement.querySelector("select").value;
+    S.tolling[to] = { ...S.tolling[from] };
+    renderTolling(); refreshComparador(); save();
+    return;
+  }
+  if (b.dataset.mrm !== undefined) {
+    if (S.materials.length > 1) S.materials.splice(+b.dataset.mrm, 1);
+    renderMaterials(); refreshCases(); refreshComparador(); save();
+    return;
+  }
+  if (b.dataset.clear !== undefined) {
+    const cv = document.querySelector(`canvas[data-canvas="${b.dataset.clear}"]`);
+    if (cv) cv._clear();
+    return;
+  }
+  if (b.classList.contains("tab")) {
+    document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t === b ? "true" : "false"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("hidden", p.id !== b.dataset.panel));
+    if (b.dataset.panel === "p-comp" || b.dataset.panel === "p-report") refreshComparador();
+    return;
+  }
+  switch (b.id) {
+    case "theme": {
+      const cu = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      const next = cu === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem(THEME_KEY, next); } catch (err) {}
+      setThemeBtn();
+      break;
+    }
+    case "btn-banxico": actualizarDolar(); break;
+    case "t-clear": armConfirm(b, () => { blankTolling(); renderTolling(); refreshComparador(); save(); }); break;
+    case "g-clear": armConfirm(b, () => { blankGeneral(); renderMaterials(); renderCases(); refreshCobro(); refreshCobroInput(); refreshComparador(); save(); }); break;
+    case "m-add":
+      S.materials.push({ name: "", compra: 0, venta: 0, peso: 0 });
+      renderMaterials(); refreshCases(); refreshComparador(); save(); break;
+    case "btn-print": {
+      document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.panel === "p-report" ? "true" : "false"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.toggle("hidden", p.id !== "p-report"));
+      refreshComparador();
+      const ps = $("#print-status");
+      ps.textContent = "";
+      try { window.print(); }
+      catch (err) { ps.textContent = "La impresión no está disponible aquí. Abre el archivo index.html en tu navegador y vuelve a intentar."; }
+      break;
+    }
+  }
+});
+
+/* ---------- arranque ---------- */
+load();
+try {
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme === "dark" || savedTheme === "light") document.documentElement.dataset.theme = savedTheme;
+  const savedToken = localStorage.getItem(TOKEN_KEY);
+  if (savedToken) { $("#token").value = savedToken; $("#remember").checked = true; }
+} catch (e) {}
+if (!S.rep.folio) S.rep.folio = "COT-" + new Date().toISOString().slice(0, 10).replace(/-/g, "");
+setThemeBtn();
+refreshRate();
+refreshCobroInput();
+refreshRepInputs();
+renderTolling();
+renderMaterials();
+renderCases();
+renderSignatures();
+rateNote();
+refreshAll();
+})();
+</script>
+</body>
+</html>
